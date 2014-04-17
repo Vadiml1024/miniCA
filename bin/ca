@@ -109,6 +109,30 @@ ca_init() {
   fi
 }
 
+#
+# Verify a certificate against the ca. The parameter is the certificate
+# in .pem format
+ca_verify() {
+  [[ "$CA_ROOT" ]] || die "Missing -r option"
+
+  local pem=${1:-}
+  [[ "$pem" ]] || die "Missing .pem parameter"
+  [[ -e "$pem" ]] || die "Missing file $pem"
+
+  # I am not sure about the openssl return values. 
+  # Asking to verify a non-pem file results in exit code 0, at least
+  # (huh?).
+  #
+  # That's why we parse openssl's output instead 
+  result=$($verify -verbose -purpose sslserver -CAfile $CA_ROOT/root/certificate.pem $pem)
+  if echo $result | grep -e ": OK\$" ; then
+    exit 0
+  else
+    echo $result
+    exit 1
+  fi
+}
+
 # -- parse parameters -------------------------------------------------
 
 usage()
@@ -154,6 +178,10 @@ case $subcommand in
   sign)
     ca_init
     ca_sign_csr "$@"
+    ;;
+  verify)
+    ca_init
+    ca_verify "$@"
     ;;
   *)
     printf "Unknown or missing subcommand %s.\n\n" subcommand
