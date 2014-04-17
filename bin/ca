@@ -114,14 +114,14 @@ ca_init() {
 usage()
 {
 cat << EOF
-usage: $0 <subcommand> options ...
+Usage: $0 <subcommand> options ...
 
 The following subcommands are supported:
 
 $0 generate CN                  ... generate a key and a CSR for a given CN
 $0 init -r ROOT                 ... initialize a CA in ROOT
 
-General options:
+General options include:
 
 -v      Verbose
 EOF
@@ -129,14 +129,12 @@ EOF
 }
 
 subcommand=${1:-}
-shift
+[[ "$subcommand" ]] && shift
 
 while getopts “hr:” OPTION
 do
-  echo "OPTION $OPTION $OPTARG"
   case $OPTION in
     r) 
-    echo set root
     CA_ROOT=$OPTARG ;;
     v) VERBOSE=1 ;;
     h) usage ;;
@@ -158,6 +156,7 @@ case $subcommand in
     ca_sign_csr "$@"
     ;;
   *)
-    die "Unknown or missing subcommand ${subcommand}."
+    printf "Unknown or missing subcommand %s.\n\n" subcommand
+    usage
     ;;
 esac
