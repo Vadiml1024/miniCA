@@ -13,8 +13,14 @@ export CA_ROOT
 
 # -- shortcuts for openssl commands -----------------------------------
 
+openssl() {
+  echo '> openssl' "$@" >&2
+  $(which openssl) "$@"
+}
+
 req="openssl req -config ${HERE}/ca.ssl.conf"
 genrsa="openssl genrsa"
+verify="openssl verify"
 ca="openssl ca -config ${HERE}/ca.ssl.conf"
 
 # -- helpers ----------------------------------------------------------
@@ -30,32 +36,26 @@ die() {
 # create a certificate for common name $1. This is typically done by 
 # the client; the resulting set is sent to the CA to be signed there.
 ssl_keygen() {
-  local fqdn=$1
-  [[ "$fqdn" ]]
+  local fqdn=${1:-}
+  [[ "$fqdn" ]] || die "Missing fqdn parameter"
   
-  if [[ -e ${fqdn}.priv ]]; then
-    die "Target file ${fqdn}.priv exists already"
-  fi
-  if [[ -e ${fqdn}.csr ]]; then
-    die "Target file ${fqdn}.csr exists already"
-  fi
+  [[ -e ${fqdn}.priv ]] && die "Target file ${fqdn}.priv exists already"
+  [[ -e ${fqdn}.csr ]]  && die "Target file ${fqdn}.csr exists already"
   
-  $req \
-            -new -nodes \
-            -keyout ${fqdn}.priv \
-            -out ${fqdn}.csr \
-            -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn} \
-            -days 7300
+  $req -new \
+       -nodes \
+       -keyout ${fqdn}.priv \
+       -out ${fqdn}.csr \
+       -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn} \
+       -days 7300
 }
 
 #
 # Sign a cerificate request in $1. Creates .pem file from .csr file.
 # (i.e. ca_sign_csr abc.csr creates abc.pem)
 ca_sign_csr() {
-  ca_init
-
   local csr=$1
-  [[ "$csr" ]]
+  [[ "$csr" ]] || die "Missing .csr parameter"
   [[ -e "$csr" ]] || die "Missing file $csr"
 
   local out=$(echo $csr | sed 's-\.csr$--').pem
@@ -144,10 +144,13 @@ The following subcommands are supported:
 
 $0 generate CN                  ... generate a key and a CSR for a given CN
 $0 init -r ROOT                 ... initialize a CA in ROOT
+$0 sign -r ROOT name.csr        ... sign a CSR
+$0 verify -r ROOT name.pem      ... verify a certificate against the CSR
 
 General options include:
 
--v      Verbose
+    -v ... Verbose: show openssl invocations
+
 EOF
   exit 1
 }
