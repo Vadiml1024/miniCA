@@ -1,0 +1,163 @@
+#!/bin/bash
+set -o nounset
+set -o errexit
+
+# -- local settings ---------------------------------------------------
+
+HERE=$(realpath $(dirname $0))
+
+CA_ROOT=
+export CA_ROOT
+
+. ${HERE}/ca.conf
+
+# -- shortcuts for openssl commands -----------------------------------
+
+req="openssl req -config ${HERE}/ca.ssl.conf"
+genrsa="openssl genrsa"
+ca="openssl ca -config ${HERE}/ca.ssl.conf"
+
+# -- helpers ----------------------------------------------------------
+
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+# -- create key and CSR -----------------------------------------------
+
+#
+# create a certificate for common name $1. This is typically done by 
+# the client; the resulting set is sent to the CA to be signed there.
+ssl_keygen() {
+  local fqdn=$1
+  [[ "$fqdn" ]]
+  
+  if [[ -e ${fqdn}.priv ]]; then
+    die "Target file ${fqdn}.priv exists already"
+  fi
+  if [[ -e ${fqdn}.csr ]]; then
+    die "Target file ${fqdn}.csr exists already"
+  fi
+  
+  $req \
+            -new -nodes \
+            -keyout ${fqdn}.priv \
+            -out ${fqdn}.csr \
+            -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn} \
+            -days 7300
+}
+
+#
+# Sign a cerificate request in $1. Creates .pem file from .csr file.
+# (i.e. ca_sign_csr abc.csr creates abc.pem)
+ca_sign_csr() {
+  ca_init
+
+  local csr=$1
+  [[ "$csr" ]]
+  [[ -e "$csr" ]] || die "Missing file $csr"
+
+  local out=$(echo $csr | sed 's-\.csr$--').pem
+
+  $ca -batch \
+    -policy policy_anything \
+    -out $out \
+    -infiles "$csr"
+
+  # keep certificate in $CA_ROOT/certs
+  cp $out "$CA_ROOT/certs/$(basename $out)"
+}
+
+#
+# initialise the CA. Needs the -r option.
+ca_init() {
+  [[ "$CA_ROOT" ]] || die "Missing -r option"
+
+  if ! [ -e $CA_ROOT/index.txt ]; then
+  
+    # -- create CA directory structure --------------------------------
+
+    mkdir -p -m 0700 $CA_ROOT/private \
+      $CA_ROOT/certs \
+      $CA_ROOT/csr \
+      $CA_ROOT/newcerts \
+      $CA_ROOT/crl \
+      $CA_ROOT/root
+  
+    touch $CA_ROOT/index.txt
+    echo '01' > $CA_ROOT/serial     
+    
+    # -- create CA root private key -----------------------------------
+    $genrsa -out $CA_ROOT/root/private_key.pem 2048
+  
+    # -- create self signed root certificate --------------------------
+    $req -new \
+      -subj "/C=$CA_COUNTRY/ST=$CA_STATE/L=$CA_CITY/CN=$CA_COMMONNAME" \
+      -out $CA_ROOT/root/certificate.pem \
+      -key $CA_ROOT/root/private_key.pem -x509 \
+      -days 7300
+
+    # -- Create an initial empty certificate revocation list (CRL) ----
+
+    $ca \
+      -gencrl \
+      -keyfile $CA_ROOT/root/private_key.pem \
+      -cert $CA_ROOT/root/certificate.pem \
+      -out $CA_ROOT/crl/crl.pem
+
+  fi
+}
+
+# -- parse parameters -------------------------------------------------
+
+usage()
+{
+cat << EOF
+usage: $0 <subcommand> options ...
+
+The following subcommands are supported:
+
+$0 generate CN                  ... generate a key and a CSR for a given CN
+$0 init -r ROOT                 ... initialize a CA in ROOT
+
+General options:
+
+-v      Verbose
+EOF
+  exit 1
+}
+
+subcommand=${1:-}
+shift
+
+while getopts “hr:” OPTION
+do
+  echo "OPTION $OPTION $OPTARG"
+  case $OPTION in
+    r) 
+    echo set root
+    CA_ROOT=$OPTARG ;;
+    v) VERBOSE=1 ;;
+    h) usage ;;
+    ?) usage ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+case $subcommand in 
+  generate)
+    ssl_keygen "$@"
+    ;;
+  init)
+    ca_init
+    ;;
+  sign)
+    ca_init
+    ca_sign_csr "$@"
+    ;;
+  *)
+    die "Unknown or missing subcommand ${subcommand}."
+    ;;
+esac
