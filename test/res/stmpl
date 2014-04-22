@@ -1,0 +1,10 @@
+#!/bin/sh
+# A simple text replacement script; replaces all occurences of ${{NAME}} with
+# the environment setting NAME.
+
+SED_SCRIPT_FILE=`mktemp /tmp/stmpl.XXXXXX` || exit 1
+
+env | sed 's/[\%]/\\&/g;s/\([^=]*\)=\(.*\)/s%${{\1}}%\2%g/' > $SED_SCRIPT_FILE
+
+cat $1 | sed -f $SED_SCRIPT_FILE
+rm $SED_SCRIPT_FILE

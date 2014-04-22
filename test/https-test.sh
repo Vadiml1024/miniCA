@@ -32,7 +32,7 @@ it_has_prerequisites() {
 it_works_with_ruby_https() {
   generate_localhost_certificate
 
-  ruby $HERE/https.rb --root $HERE/httproot --port 12346 --certificate localhost.pem --key localhost.priv &
+  ruby $HERE/res/https.rb --root $HERE/res --port 12346 --certificate localhost.pem --key localhost.priv &
   retry test -f https.pid
 
   working_https_tests
@@ -42,12 +42,12 @@ it_works_with_ruby_https() {
 it_works_with_nginx() {
   generate_localhost_certificate
 
-  export ROOT=$HERE/httproot
+  export ROOT=$HERE/res
   export SSL_CERT=localhost.pem
   export SSL_KEY=localhost.priv
   export PWD=$(pwd)
 
-  $HERE/stmpl $HERE/nginx.conf > nginx.conf.actual
+  $HERE/res/stmpl $HERE/res/nginx.conf > nginx.conf.actual
   nginx -c $(pwd)/nginx.conf.actual
   retry test -f https.pid
 

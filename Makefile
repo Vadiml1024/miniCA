@@ -1,4 +1,4 @@
 .PHONY: test
 
 test:
-	./test/roundup test/*-test.sh
+	./test/res/roundup test/*-test.sh
