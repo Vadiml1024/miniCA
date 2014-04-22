@@ -5,10 +5,14 @@ require 'optparse'
 options = {
   :Port               => 12345,
   :SSLCertificate     => "localhost.pem",
-  :SSLPrivateKey      => "localhost.priv"
+  :SSLPrivateKey      => "localhost.priv", 
+  :DocumentRoot       => File.expand_path(File.dirname(__FILE__))
 }
 
 OptionParser.new do |opts|
+  opts.on("-r", "--root DIR", "root directory") do |v|
+    options[:DocumentRoot] = v
+  end
   opts.on("-p", "--port PORT", Integer, "Port to listen on") do |v|
     options[:Port] = v
   end
@@ -20,20 +24,9 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-# -- a simple web server controller -----------------------------------
-
-require "webrick"
-
-class Simple < WEBrick::HTTPServlet::AbstractServlet
-  def do_GET request, response
-    response.status = 200
-    response['Content-Type'] = 'text/plain'
-    response.body = "helloworld\n"
-  end
-end
-
 # -- start web server -------------------------------------------------
 
+require "webrick"
 require 'webrick/https'
 require 'openssl'
 
@@ -46,8 +39,6 @@ options[:SSLCertificate] = OpenSSL::X509::Certificate.new(File.read(options[:SSL
 options[:SSLPrivateKey] = OpenSSL::PKey::RSA.new(File.read(options[:SSLPrivateKey]))
 
 $server = WEBrick::HTTPServer.new options
-$server.mount "/", Simple
-
 trap('INT') { $server.stop }
 File.open("https.pid", "w") { |io| io.write($$) }
 

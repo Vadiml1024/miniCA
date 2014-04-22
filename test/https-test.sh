@@ -37,7 +37,7 @@ it_works_with_https() {
   [[ -e localhost.pem ]]
   [[ -e localhost.priv ]]
   
-  ruby $HERE/https.rb --port 12346 --certificate localhost.pem --key localhost.priv &
+  ruby $HERE/https.rb --root $HERE/httproot --port 12346 --certificate localhost.pem --key localhost.priv &
   retry test -f https.pid
 
   # -- test unverified HTTPS connection -------------------------------
