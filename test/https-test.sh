@@ -22,10 +22,42 @@ ssl_verify() {
   echo $result | grep '^0 ' > /dev/null
 }
 
-it_works_with_https() {
-  which ruby || later "Missing ruby"
-  which curl || later "Missing curl"
+it_has_prerequisites() {
+  which curl || false "Missing curl"
 
+  which ruby || later  "Missing ruby"
+  which nginx || later "Missing nginx"
+}
+
+it_works_with_ruby_https() {
+  generate_localhost_certificate
+
+  ruby $HERE/https.rb --root $HERE/httproot --port 12346 --certificate localhost.pem --key localhost.priv &
+  retry test -f https.pid
+
+  working_https_tests
+  failing_https_tests
+}
+
+it_works_with_nginx() {
+  generate_localhost_certificate
+
+  export ROOT=$HERE/httproot
+  export SSL_CERT=localhost.pem
+  export SSL_KEY=localhost.priv
+  export PWD=$(pwd)
+
+  $HERE/stmpl $HERE/nginx.conf > nginx.conf.actual
+  nginx -c $(pwd)/nginx.conf.actual
+  retry test -f https.pid
+
+  working_https_tests
+  failing_https_tests
+}
+
+# -- helpers ----------------------------------------------------------
+
+generate_localhost_certificate() {
   # -- generate a cerificate signed by a CA in ./ca -------------------
   $ca generate localhost
   $ca init -r ca
@@ -36,20 +68,24 @@ it_works_with_https() {
   #    in after() (see testhelper.inc)
   [[ -e localhost.pem ]]
   [[ -e localhost.priv ]]
-  
-  ruby $HERE/https.rb --root $HERE/httproot --port 12346 --certificate localhost.pem --key localhost.priv &
-  retry test -f https.pid
+}
 
+# -- run actual tests -------------------------------------------------
+
+working_https_tests() {
   # -- test unverified HTTPS connection -------------------------------
-  [[ "helloworld" = $(curl -k https://localhost:12346) ]]
+  if [[ "helloworld" != $(curl -k https://localhost:12346) ]]; then
+    false not equal
+  fi
 
   # -- verify certificate with openssl's s_client ---------------------
 
   # verify against root certificate: this is proof that the localhost 
   # certificate is signed by the root certificate.
   ssl_verify -CAfile ca/root/certificate.pem -connect localhost:12346
-  
-  later Some tests below do not work
+}
+
+failing_https_tests() {
   # TODO: verify against server certificate. Does not work; should it?
   # The code below does not work yet.. why?
   # openssl s_client -showcerts -connect localhost:12346  </dev/null | openssl x509 -outform PEM > server.pem

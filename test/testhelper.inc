@@ -13,9 +13,9 @@ before() {
 
 after() {
   if [ -f https.pid ]; then
-    kill -9 $(cat https.pid) || true
+    kill -TERM $(cat https.pid) || true
   fi
-  
+
   cd ..
   rm -rf $scrub
 }
