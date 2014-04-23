@@ -74,7 +74,7 @@ generate_localhost_certificate() {
 
 working_https_tests() {
   # -- test unverified HTTPS connection -------------------------------
-  if [[ "helloworld" != $(curl -k https://localhost:12346) ]]; then
+  if [[ "helloworld" != $(curl --ipv4 -k https://localhost:12346) ]]; then
     false not equal
   fi
 
@@ -93,12 +93,12 @@ failing_https_tests() {
   # ssl_verify -CAfile server.pem -connect localhost:12346
 
   # -- curl connection fails, when no custom cert is specified --------
-  curl https://localhost:12346 && false
+  curl --ipv4 https://localhost:12346 && false
   [[ "$?" = 60 ]]
   
   # -- test HTTPS connection with given CAcert ------------------------
   # TODO: 
-  # curl --cacert ca/root/certificate.pem https://localhost:12346
+  # curl --ipv4 --cacert ca/root/certificate.pem https://localhost:12346
   
-  #  [[ "helloworld" = $(curl -k https://localhost:12346) ]]
+  #  [[ "helloworld" = $(curl --ipv4 -k https://localhost:12346) ]]
 }
