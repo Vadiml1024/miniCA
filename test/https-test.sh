@@ -24,23 +24,21 @@ ssl_verify() {
 
 it_has_prerequisites() {
   which curl || false "Missing curl"
-
   which ruby || later  "Missing ruby"
   which nginx || later "Missing nginx"
 }
 
 it_works_with_ruby_https() {
-  generate_localhost_certificate
+  generate_certificate localhost
 
   ruby $HERE/res/https.rb --root $HERE/res --port 12346 --certificate localhost.pem --key localhost.priv &
   retry test -f https.pid
 
-  working_https_tests
-  failing_https_tests
+  https_tests
 }
 
 it_works_with_nginx() {
-  generate_localhost_certificate
+  generate_certificate localhost
 
   export ROOT=$HERE/res
   export SSL_CERT=localhost.pem
@@ -51,54 +49,23 @@ it_works_with_nginx() {
   nginx -c $(pwd)/nginx.conf.actual
   retry test -f https.pid
 
-  working_https_tests
-  failing_https_tests
-}
-
-# -- helpers ----------------------------------------------------------
-
-generate_localhost_certificate() {
-  # -- generate a cerificate signed by a CA in ./ca -------------------
-  $ca generate localhost
-  $ca init -r ca
-  $ca sign -r ca localhost.csr
-
-  # -- start a server in the background -------------------------------
-  #    and wait until pid file exists. The server will be killed 
-  #    in after() (see testhelper.inc)
-  [[ -e localhost.pem ]]
-  [[ -e localhost.priv ]]
+  https_tests
 }
 
 # -- run actual tests -------------------------------------------------
 
-working_https_tests() {
-  # -- test unverified HTTPS connection -------------------------------
+
+# -- test unverified HTTPS connection -------------------------------
+# This verifies that the certificate works with the server.
+
+https_tests() {
+
   if [[ "helloworld" != $(curl --ipv4 -k https://localhost:12346) ]]; then
     false not equal
   fi
 
-  # -- verify certificate with openssl's s_client ---------------------
-
-  # verify against root certificate: this is proof that the localhost 
-  # certificate is signed by the root certificate.
-  ssl_verify -CAfile ca/root/certificate.pem -connect localhost:12346
-}
-
-failing_https_tests() {
-  # TODO: verify against server certificate. Does not work; should it?
-  # The code below does not work yet.. why?
-  # openssl s_client -showcerts -connect localhost:12346  </dev/null | openssl x509 -outform PEM > server.pem
-  # cat server.pem
-  # ssl_verify -CAfile server.pem -connect localhost:12346
-
-  # -- curl connection fails, when no custom cert is specified --------
-  curl --ipv4 https://localhost:12346 && false
-  [[ "$?" = 60 ]]
-  
-  # -- test HTTPS connection with given CAcert ------------------------
-  # TODO: 
-  # curl --ipv4 --cacert ca/root/certificate.pem https://localhost:12346
-  
-  #  [[ "helloworld" = $(curl --ipv4 -k https://localhost:12346) ]]
+  # [todo] we would like to verify the certificate via curl also. However,
+  # on OSX curl ignores the ca-related command line arguments and uses
+  # the system's certificate store instead -- and can not be used
+  # for a scripted test as a result.
 }

@@ -28,3 +28,16 @@ md5() {
     false
   fi
 }
+
+generate_certificate() {
+  local name=$1
+  [[ "$name" ]]
+  
+  # -- generate a cerificate signed by a CA in ./ca -------------------
+  $ca generate $name
+  $ca init -r ca
+  $ca sign -r ca $name.csr
+
+  [[ -e $name.pem ]]
+  [[ -e $name.priv ]]
+}

@@ -1,0 +1,50 @@
+#!/usr/bin/env jit
+
+#include <stdio.h>      //printf
+#include <string.h>     //memset
+#include <stdlib.h>     //for exit(0);
+#include <sys/socket.h>
+#include <errno.h>      //For errno - the error number
+#include <netdb.h>      //hostent
+#include <arpa/inet.h>
+
+static const char* hostname_to_ip(char * hostname);
+
+int main(int argc , char *argv[])
+{
+    if(argc < 2) {
+        fprintf(stderr, "Usage: %s hostname ...\n", argv[0]);
+        return 1;
+    }
+
+    while(*++argv) {
+        const char* resolved = hostname_to_ip(*argv);
+        printf("%s\n", resolved);
+    }
+
+    return 0;
+}
+
+/*
+    Get ip from domain name; return result in static buffer.
+ */
+
+static const char* hostname_to_ip(char * hostname)
+{
+    struct hostent *he = gethostbyname(hostname);
+    if(!he || !he->h_addr_list) {
+        herror("gethostbyname");
+        exit(2);
+    }
+
+    struct in_addr **addr_list = (struct in_addr **) he->h_addr_list;
+    if(!*addr_list) {
+	    fprintf(stderr, "Cannot resolve %s.\n", hostname);
+	    exit(2);
+	}
+	
+    static char ip[20]; // NNN.NNN.NNN.NNN + some more spaces..
+
+	strcpy(ip , inet_ntoa(**addr_list) );
+    return ip;
+}
