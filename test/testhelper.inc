@@ -1,7 +1,7 @@
 # The ca script to test
 
 here=$(cd $(dirname $1) && pwd)
-ca=${here}/../bin/ca
+ca=${here}/../bin/miniCA
 
 # A temporary workspace to run tests.
 scrub=${here}/tmp

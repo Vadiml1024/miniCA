@@ -9,7 +9,7 @@ HERE=$(realpath $(dirname $0))
 CA_ROOT=
 export CA_ROOT
 
-. ${HERE}/ca.conf
+. ${HERE}/miniCA.conf
 
 # -- shortcuts for openssl commands -----------------------------------
 
@@ -18,10 +18,10 @@ openssl() {
   $(which openssl) "$@"
 }
 
-req="openssl req -config ${HERE}/ca.ssl.conf"
+req="openssl req -config ${HERE}/miniCA.ssl.conf"
 genrsa="openssl genrsa"
 verify="openssl verify"
-ca="openssl ca -config ${HERE}/ca.ssl.conf"
+ca="openssl ca -config ${HERE}/miniCA.ssl.conf"
 
 # -- helpers ----------------------------------------------------------
 
@@ -110,7 +110,7 @@ ca_init() {
 }
 
 #
-# Verify a certificate against the ca. The parameter is the certificate
+# Verify a certificate against the miniCA. The parameter is the certificate
 # in .pem format
 ca_verify() {
   [[ "$CA_ROOT" ]] || die "Missing -r option"
