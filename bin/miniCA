@@ -6,6 +6,8 @@ set -o errexit
 
 HERE=$(realpath $(dirname $0))
 
+MINICA_ROOT=
+
 CA_ROOT=
 export CA_ROOT
 
@@ -13,9 +15,11 @@ export CA_ROOT
 
 # -- shortcuts for openssl commands -----------------------------------
 
-set_ca_root() {
-  CA_ROOT=${1:-}
-  [[ "$CA_ROOT" ]] || die "Set CA root directory using the -r option"
+set_ca_instance() {
+  [[ "$MINICA_ROOT" ]] || die "Set miniCA root directory using the -r option"
+  local ca_instance=${1:-}
+
+  CA_ROOT=$MINICA_ROOT/$ca_instance
 }
 
 verify_ca_root() {
@@ -177,7 +181,7 @@ while getopts “hr:” OPTION
 do
   case $OPTION in
     r) 
-    MINICAROOT=$OPTARG ;;
+    MINICA_ROOT=$OPTARG ;;
     v) VERBOSE=1 ;;
     h) usage ;;
     ?) usage ;;
@@ -191,16 +195,16 @@ case $subcommand in
     ssl_keygen "$@"
     ;;
   init)
-    set_ca_root "$MINICAROOT/root"
+    set_ca_instance "root"
     ca_init
     ;;
   sign)
-    set_ca_root "$MINICAROOT/root"
+    set_ca_instance "root"
     ca_init
     ca_sign_csr "$@"
     ;;
   verify)
-    set_ca_root "$MINICAROOT/root"
+    set_ca_instance "root"
     ca_init
     ca_verify "$@"
     ;;
