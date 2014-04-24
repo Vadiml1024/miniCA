@@ -13,6 +13,15 @@ export CA_ROOT
 
 # -- shortcuts for openssl commands -----------------------------------
 
+set_ca_root() {
+  CA_ROOT=${1:-}
+  [[ "$CA_ROOT" ]] || die "Set CA root directory using the -r option"
+}
+
+verify_ca_root() {
+  [[ -d "$CA_ROOT" ]] || die "Missing ca installation in $CA_ROOT"
+}
+
 openssl() {
   echo '> openssl' "$@" >&2
   $(which openssl) "$@"
@@ -34,7 +43,7 @@ die() {
 
 #
 # create a certificate for common name $1. This is typically done by 
-# the client; the resulting set is sent to the CA to be signed there.
+# the client; the resulting csr is sent to the CA to be signed there.
 ssl_keygen() {
   local fqdn=${1:-}
   [[ "$fqdn" ]] || die "Missing fqdn parameter"
@@ -53,7 +62,11 @@ ssl_keygen() {
 #
 # Sign a cerificate request in $1. Creates .pem file from .csr file.
 # (i.e. ca_sign_csr abc.csr creates abc.pem)
+#
+# Arguments: ca_sign_csr csr
 ca_sign_csr() {
+  verify_ca_root
+
   local csr=$1
   [[ "$csr" ]] || die "Missing .csr parameter"
   [[ -e "$csr" ]] || die "Missing file $csr"
@@ -71,9 +84,9 @@ ca_sign_csr() {
 
 #
 # initialise the CA. Needs the -r option.
+#
+# Arguments: ca_init
 ca_init() {
-  [[ "$CA_ROOT" ]] || die "Missing -r option"
-
   if ! [ -e $CA_ROOT/index.txt ]; then
   
     # -- create CA directory structure --------------------------------
@@ -112,8 +125,10 @@ ca_init() {
 #
 # Verify a certificate against the miniCA. The parameter is the certificate
 # in .pem format
+#
+# Arguments: ca_verify
 ca_verify() {
-  [[ "$CA_ROOT" ]] || die "Missing -r option"
+  verify_ca_root
 
   local pem=${1:-}
   [[ "$pem" ]] || die "Missing .pem parameter"
@@ -162,7 +177,7 @@ while getopts “hr:” OPTION
 do
   case $OPTION in
     r) 
-    CA_ROOT=$OPTARG ;;
+    MINICAROOT=$OPTARG ;;
     v) VERBOSE=1 ;;
     h) usage ;;
     ?) usage ;;
@@ -176,13 +191,16 @@ case $subcommand in
     ssl_keygen "$@"
     ;;
   init)
+    set_ca_root "$MINICAROOT/root"
     ca_init
     ;;
   sign)
+    set_ca_root "$MINICAROOT/root"
     ca_init
     ca_sign_csr "$@"
     ;;
   verify)
+    set_ca_root "$MINICAROOT/root"
     ca_init
     ca_verify "$@"
     ;;

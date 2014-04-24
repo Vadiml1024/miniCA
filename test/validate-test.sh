@@ -59,15 +59,15 @@ it_works_with_nginx() {
   # Note that openssl's s_client does not verify the connection name 
   # (i.e. localhost)
   
-  ssl_verify -CAfile ca/root/certificate.pem -connect localhost:12346
+  ssl_verify -CAfile ca/root/root/certificate.pem -connect localhost:12346
 
   # -- verify certificate with gnutls-cli client ----------------------
 
   # works on a localhost connection
-  gnutls-cli --x509cafile=ca/root/certificate.pem localhost -p 12346 < /dev/null 
+  gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
 
   # don't trust on non-localhost connection
   if [[ "$DEV_RESOLVES_TO_LOCALHOST" ]]; then
-    ! gnutls-cli --x509cafile=ca/root/certificate.pem test.ca.dev -p 12346 < /dev/null 
+    ! gnutls-cli --x509cafile=ca/root/root/certificate.pem test.ca.dev -p 12346 < /dev/null 
   fi
 }
