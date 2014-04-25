@@ -1,4 +1,4 @@
 .PHONY: test
 
 test:
-	./res/roundup *-test.sh
+	env MINICA_TEST_MODE=y ./res/roundup *-test.sh
