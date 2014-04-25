@@ -7,7 +7,9 @@ it_verifies_certificate() {
   $ca init -r ca1
   $ca generate foo
   $ca sign -r ca1 foo.csr
-  $ca verify -r ca1 foo.pem
+
+  # see issue #2
+  $ca verify -r ca1 foo.reverse.pem
 
   # fails if file is missing
   

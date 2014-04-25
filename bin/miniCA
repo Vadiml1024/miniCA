@@ -94,24 +94,36 @@ ca_sign_csr() {
   [[ "$csr" ]] || die "Missing .csr parameter"
   [[ -e "$csr" ]] || die "Missing file $csr"
 
-  local out=$(echo $csr | sed 's-\.csr$--').pem
+  local basename=$(echo $csr | sed 's-\.csr$--')
 
-  $ca -batch \
-    -policy policy_anything \
-    -out $out \
+  $ca -batch                          \
+    -policy policy_anything           \
+    -notext                           \
+    -out "$basename.bare.pem"         \
     -infiles "$csr"
 
   # keep certificate in $CA_ROOT/certs
-  cp $out "$CA_ROOT/certs/$(basename $out)"
+  cp "$basename.bare.pem" "$CA_ROOT/certs/$basename"
+
+  # generate complete certificate (i.e. certificate concatenated with root CA certificate)
+  # cat "$MINICA_ROOT/root/root/certificate.pem" "$basename.bare.pem" > "$basename.pem"
+
+  cat "$basename.bare.pem" "$MINICA_ROOT/root/root/certificate.pem" > "$basename.pem"
+
+  # see issue #2
+  cat "$MINICA_ROOT/root/root/certificate.pem" "$basename.bare.pem" > "$basename.reverse.pem"
 }
 
 #
-# initialise the CA. Needs the -r option.
+# initialise a CA in $CA_ROOT. If CA_PARENT is set, then the new CA
+# will be an intermediate, with a parent CA in $CA_PARENT.
 #
 # Arguments: ca_init
 ca_init() {
   [[ -d $CA_ROOT ]] || mkdir -p $CA_ROOT
   pushd $CA_ROOT > /dev/null
+
+  local ca_parent=${CA_PARENT:-}
 
   if ! [ -e index.txt ]; then
     # -- create CA directory structure --------------------------------
@@ -124,12 +136,38 @@ ca_init() {
     # -- create CA root private key -----------------------------------
     $genrsa -out root/private_key.pem $MINICA_KEY_SIZE
 
-    # -- create self signed root certificate --------------------------
+    # -- create CA root certificate -----------------------------------
+
+    #
+    # If this is the root, create self signed root certificate (-x509);
+    # if this is an intermediate, create a CSR for the root CA.
+    #
+    if [[ -z "$ca_parent" ]]; then
+      local req_output="root/certificate.pem -x509"
+    else
+      local req_output="root/certificate.csr.pem"
+    fi
+
     $req -new \
-      -subj "/C=$CA_COUNTRY/ST=$CA_STATE/L=$CA_CITY/CN=$CA_COMMONNAME" \
-      -out root/certificate.pem \
-      -key root/private_key.pem -x509 \
-      -days 7300
+      -subj "/C=$CA_COUNTRY/ST=$CA_STATE/L=$CA_CITY/O=$CA_ORG_NAME/OU=$CA_ORG_UNIT/CN=$CA_COMMONNAME" \
+      -days 7300 \
+      -key root/private_key.pem \
+      -out $req_output
+
+    #
+    # if this is an intermediate, sign the CSR from the CA root.
+    #
+    if [[ "$ca_parent" ]]; then
+
+      env CA_ROOT=$ca_parent $ca \
+        -batch \
+        -extensions v3_ca \
+        -notext \
+        -md sha1 \
+        -in  root/certificate.csr.pem \
+        -out root/certificate.pem
+
+    fi
 
     # -- Create an initial empty certificate revocation list (CRL) ----
 
@@ -160,15 +198,13 @@ ca_verify() {
   # (huh?).
   #
   # That's why we parse openssl's output instead 
-  result=$($verify -verbose -purpose sslserver -CAfile $CA_ROOT/root/certificate.pem $pem)
+  result=$($verify -verbose -purpose sslserver -CAfile $MINICA_ROOT/root/root/certificate.pem $pem)
   if echo $result | grep -e ": OK\$" ; then
     exit 0
   else
     echo $result
     exit 1
   fi
-
-  popd
 }
 
 # -- parse parameters -------------------------------------------------
@@ -208,22 +244,27 @@ done
 
 shift $(($OPTIND - 1))
 
+minica_init() {
+  set_ca_instance "root"
+  ca_init
+  CA_PARENT=$CA_ROOT
+  set_ca_instance "intermediate"
+  ca_init
+}
+
 case $subcommand in 
   generate)
     ssl_keygen "$@"
     ;;
   init)
-    set_ca_instance "root"
-    ca_init
+    minica_init
     ;;
   sign)
-    set_ca_instance "root"
-    ca_init
+    minica_init
     ca_sign_csr "$@"
     ;;
   verify)
-    set_ca_instance "root"
-    ca_init
+    minica_init
     ca_verify "$@"
     ;;
   *)
