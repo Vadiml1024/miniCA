@@ -3,6 +3,8 @@
 here=$(cd $(dirname $1) && pwd)
 ca=${here}/../bin/miniCA
 
+export MINICA_TEST_MODE=y 
+
 # A temporary workspace to run tests.
 scrub=${here}/tmp
 

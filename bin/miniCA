@@ -6,7 +6,7 @@ set -o errexit
 
 # when MINICA_TEST_MODE is set, we use shorter key lengths. This is for
 # tests only.
-if [[ "$MINICA_TEST_MODE" = y ]]; then
+if [[ "${MINICA_TEST_MODE:-}" = y ]]; then
   readonly MINICA_KEY_SIZE=512
 else
   readonly MINICA_KEY_SIZE=4096
@@ -37,7 +37,7 @@ verify_ca_root() {
 }
 
 openssl() {
-  echo '> openssl' "$@" >&2
+  echo "[$(pwd)] > openssl" "$@" >&2
   $(which openssl) "$@"
 }
 
@@ -90,7 +90,8 @@ ssl_keygen() {
 ca_sign_csr() {
   verify_ca_root
 
-  local csr=$1
+  local csr=${1:-}
+
   [[ "$csr" ]] || die "Missing .csr parameter"
   [[ -e "$csr" ]] || die "Missing file $csr"
 
