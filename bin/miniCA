@@ -43,18 +43,27 @@ die() {
   exit 1
 }
 
+# return the absolute path for $1
+abspath() {
+  if [[ "$1" = /* ]]; then
+    echo $1
+  else
+    echo $(pwd)/$1
+  fi
+}
+
 # -- create key and CSR -----------------------------------------------
 
 #
-# create a certificate for common name $1. This is typically done by 
+# create a certificate for common name $1. This is typically done by
 # the client; the resulting csr is sent to the CA to be signed there.
 ssl_keygen() {
   local fqdn=${1:-}
   [[ "$fqdn" ]] || die "Missing fqdn parameter"
-  
+
   [[ -e ${fqdn}.priv ]] && die "Target file ${fqdn}.priv exists already"
   [[ -e ${fqdn}.csr ]]  && die "Target file ${fqdn}.csr exists already"
-  
+
   $req -new \
        -nodes \
        -keyout ${fqdn}.priv \
@@ -91,39 +100,37 @@ ca_sign_csr() {
 #
 # Arguments: ca_init
 ca_init() {
-  if ! [ -e $CA_ROOT/index.txt ]; then
-  
+  [[ -d $CA_ROOT ]] || mkdir -p $CA_ROOT
+  pushd $CA_ROOT > /dev/null
+
+  if ! [ -e index.txt ]; then
     # -- create CA directory structure --------------------------------
 
-    mkdir -p -m 0700 $CA_ROOT/private \
-      $CA_ROOT/certs \
-      $CA_ROOT/csr \
-      $CA_ROOT/newcerts \
-      $CA_ROOT/crl \
-      $CA_ROOT/root
-  
-    touch $CA_ROOT/index.txt
-    echo '01' > $CA_ROOT/serial     
-    
+    mkdir -m 0700 private certs csr newcerts crl root
+
+    touch index.txt
+    echo '01' > serial
+
     # -- create CA root private key -----------------------------------
-    $genrsa -out $CA_ROOT/root/private_key.pem 2048
-  
+    $genrsa -out root/private_key.pem 2048
+
     # -- create self signed root certificate --------------------------
     $req -new \
       -subj "/C=$CA_COUNTRY/ST=$CA_STATE/L=$CA_CITY/CN=$CA_COMMONNAME" \
-      -out $CA_ROOT/root/certificate.pem \
-      -key $CA_ROOT/root/private_key.pem -x509 \
+      -out root/certificate.pem \
+      -key root/private_key.pem -x509 \
       -days 7300
 
     # -- Create an initial empty certificate revocation list (CRL) ----
 
     $ca \
       -gencrl \
-      -keyfile $CA_ROOT/root/private_key.pem \
-      -cert $CA_ROOT/root/certificate.pem \
-      -out $CA_ROOT/crl/crl.pem
-
+      -keyfile root/private_key.pem \
+      -cert root/certificate.pem \
+      -out crl/crl.pem
   fi
+
+  popd > /dev/null
 }
 
 #
@@ -150,6 +157,8 @@ ca_verify() {
     echo $result
     exit 1
   fi
+
+  popd
 }
 
 # -- parse parameters -------------------------------------------------
@@ -180,8 +189,7 @@ subcommand=${1:-}
 while getopts “hr:” OPTION
 do
   case $OPTION in
-    r) 
-    MINICA_ROOT=$OPTARG ;;
+    r) MINICA_ROOT=$(abspath $OPTARG);;
     v) VERBOSE=1 ;;
     h) usage ;;
     ?) usage ;;
