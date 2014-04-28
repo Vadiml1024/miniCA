@@ -9,6 +9,7 @@ export MINICA_TEST_MODE=y
 scrub=${here}/tmp
 
 before() {
+  rm -rf $scrub
   mkdir -p $scrub
   cd $scrub
 }
@@ -19,7 +20,6 @@ after() {
   fi
 
   cd ..
-  rm -rf $scrub
 }
 
 md5() {
