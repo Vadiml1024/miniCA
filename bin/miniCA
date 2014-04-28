@@ -23,6 +23,10 @@ export CA_ROOT
 
 . ${HERE}/miniCA.conf
 
+# -- settings ---------------------------------------------------------
+
+MINICA_VERSION=0.1
+
 # -- shortcuts for openssl commands -----------------------------------
 
 set_ca_instance() {
@@ -267,6 +271,9 @@ case $subcommand in
   verify)
     minica_init
     ca_verify "$@"
+    ;;
+  version)
+    echo ${MINICA_VERSION}
     ;;
   *)
     printf "Unknown or missing subcommand %s.\n\n" subcommand

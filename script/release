@@ -1,0 +1,30 @@
+#!/bin/bash
+set -o nounset
+set -o errexit
+
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
+#
+# verify source code is clean
+if git status --porcelain 2>/dev/null | egrep '^ M|^M ' > /dev/null ; then
+  die "Working tree not clean."
+fi
+
+#
+#
+VERSION=$(bin/miniCA version)
+if [ -z "$VERSION" ]; then
+  die "Version must be set."
+fi
+
+TAG="v${VERSION}"
+if [ "$(git tag -l ${TAG})" ]; then
+  die "Version ${TAG} is already set."
+fi
+
+git tag -f "${TAG}" -m "Automatically tagged by release script"
+git push
+git push --follow-tags
