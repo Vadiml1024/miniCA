@@ -113,10 +113,10 @@ ca_sign_csr() {
   # generate complete certificate (i.e. certificate concatenated with intermediate and root CA certificate)
   cat "$basename.bare.pem" \
       "$MINICA_ROOT/intermediate/root/certificate.pem" \
-      "$MINICA_ROOT/root/root/certificate.pem" > "$basename.pem"
+      "$MINICA_ROOT/root.pem" > "$basename.pem"
 
   # see issue #2
-  cat "$MINICA_ROOT/root/root/certificate.pem" \
+  cat "$MINICA_ROOT/root.pem" \
       "$MINICA_ROOT/intermediate/root/certificate.pem" \
       "$basename.bare.pem" > "$basename.reverse.pem"
 }
@@ -161,6 +161,10 @@ ca_init() {
       -key root/private_key.pem \
       -out $req_output
 
+    if [[ -z "$ca_parent" ]]; then
+      cp root/certificate.pem ../root.pem
+    fi
+    
     #
     # if this is an intermediate, sign the CSR from the CA root.
     #
@@ -205,7 +209,7 @@ ca_verify() {
   # (huh?).
   #
   # That's why we parse openssl's output instead 
-  result=$($verify -verbose -purpose sslserver -CAfile $MINICA_ROOT/root/root/certificate.pem $pem)
+  result=$($verify -verbose -purpose sslserver -CAfile $MINICA_ROOT/root.pem $pem)
   if echo $result | grep -e ": OK\$" ; then
     exit 0
   else

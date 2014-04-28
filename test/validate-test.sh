@@ -45,9 +45,9 @@ start_https_server_for() {
 
   # Note that openssl's s_client does not verify the connection name, 
   # that's why the following line checks that there is SSL on 
-  # localhost:12346, which verifies against ca/root/root/certificate.pem.
+  # localhost:12346, which verifies against ca/root.pem.
   
-  ssl_verify -CAfile ca/root/root/certificate.pem -connect localhost:12346
+  ssl_verify -CAfile ca/root.pem -connect localhost:12346
 
   # -- verify certificate with gnutls-cli client ----------------------
 
@@ -58,8 +58,8 @@ start_https_server_for() {
 it_works_with_localhost() {
   start_https_server_for localhost
 
-    gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
-  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem othername.minica.dev -p 12346 < /dev/null 
+    gnutls-cli --x509cafile=ca/root.pem localhost -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root.pem othername.minica.dev -p 12346 < /dev/null 
 }
 
 it_works_with_dev_name() {
@@ -71,7 +71,7 @@ it_works_with_dev_name() {
 
   start_https_server_for test.ca.dev
 
-    gnutls-cli --x509cafile=ca/root/root/certificate.pem test.ca.dev -p 12346 < /dev/null 
-  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem test2.ca.dev -p 12346 < /dev/null 
-  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
+    gnutls-cli --x509cafile=ca/root.pem test.ca.dev -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root.pem test2.ca.dev -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root.pem localhost -p 12346 < /dev/null 
 }

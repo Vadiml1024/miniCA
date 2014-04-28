@@ -49,6 +49,17 @@ subdirectory.
 
 ## Using miniCA
 
+### Initializing miniCA: `miniCA init -r DIR`
+
+To initialize miniCA run miniCA init -r DIR, where `DIR` points to 
+a directory to hold the CA files. This initializes a root CA in `$DIR/root`,
+and an intermediate.
+
+This also creates the root certificate in `$DIR/root.pem`.
+ 
+Note: You can skip explicite initialization of miniCA; all commands that 
+need a CA will initialize it when needed.
+
 ### Generate a key pair: `miniCA generate`
 
 The `miniCA generate` command allows to generate a private/pubkey pair, and
