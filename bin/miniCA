@@ -110,13 +110,15 @@ ca_sign_csr() {
   # keep certificate in $CA_ROOT/certs
   cp "$basename.bare.pem" "$CA_ROOT/certs/$basename"
 
-  # generate complete certificate (i.e. certificate concatenated with root CA certificate)
-  # cat "$MINICA_ROOT/root/root/certificate.pem" "$basename.bare.pem" > "$basename.pem"
-
-  cat "$basename.bare.pem" "$MINICA_ROOT/root/root/certificate.pem" > "$basename.pem"
+  # generate complete certificate (i.e. certificate concatenated with intermediate and root CA certificate)
+  cat "$basename.bare.pem" \
+      "$MINICA_ROOT/intermediate/root/certificate.pem" \
+      "$MINICA_ROOT/root/root/certificate.pem" > "$basename.pem"
 
   # see issue #2
-  cat "$MINICA_ROOT/root/root/certificate.pem" "$basename.bare.pem" > "$basename.reverse.pem"
+  cat "$MINICA_ROOT/root/root/certificate.pem" \
+      "$MINICA_ROOT/intermediate/root/certificate.pem" \
+      "$basename.bare.pem" > "$basename.reverse.pem"
 }
 
 #
