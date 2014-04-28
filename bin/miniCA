@@ -41,7 +41,7 @@ verify_ca_root() {
 }
 
 openssl() {
-  echo "[$(pwd)] > openssl" "$@" >&2
+  echo "[$(pwd)] CA_ROOT=${CA_ROOT} > openssl" "$@" >&2
   $(which openssl) "$@"
 }
 
