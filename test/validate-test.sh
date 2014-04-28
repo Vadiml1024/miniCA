@@ -4,14 +4,6 @@ describe "Various certificate validations"
 HERE=$(cd $(dirname $1) && pwd)
 . $HERE/testhelper.inc
 
-# .dev hostnames should resolve to 127.0.0.1. If they don't we
-# do not run 
-if [[ $(res/jit res/resolve test.ca.dev) = "127.0.0.1" ]]; then
-  DEV_RESOLVES_TO_LOCALHOST=y
-else
-  DEV_RESOLVES_TO_LOCALHOST=
-fi
-
 retry() {
   for i in 1 2 3 4 5 6 7 8 9 10 ; do
     $@ && return
@@ -30,12 +22,15 @@ ssl_verify() {
   echo $result | grep '^0 ' > /dev/null
 }
 
-it_works_with_nginx() {
-  generate_certificate localhost
+start_https_server_for() {
+  local commonname=${1:-}
+  [[ "$commonname" ]]
+
+  generate_certificate $commonname
 
   export ROOT=$HERE/res
-  export SSL_CERT=localhost.pem
-  export SSL_KEY=localhost.priv
+  export SSL_CERT=$commonname.pem
+  export SSL_KEY=$commonname.priv
   export PWD=$(pwd)
 
   $HERE/res/stmpl $HERE/res/nginx.conf > nginx.conf.actual
@@ -48,18 +43,35 @@ it_works_with_nginx() {
 
   # -- verify certificate with openssl's s_client ---------------------
 
-  # Note that openssl's s_client does not verify the connection name 
-  # (i.e. localhost)
+  # Note that openssl's s_client does not verify the connection name, 
+  # that's why the following line checks that there is SSL on 
+  # localhost:12346, which verifies against ca/root/root/certificate.pem.
   
   ssl_verify -CAfile ca/root/root/certificate.pem -connect localhost:12346
 
   # -- verify certificate with gnutls-cli client ----------------------
 
   # works on a localhost connection
-  gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
+}
 
-  # don't trust on non-localhost connection
-  if [[ "$DEV_RESOLVES_TO_LOCALHOST" ]]; then
-    ! gnutls-cli --x509cafile=ca/root/root/certificate.pem test.ca.dev -p 12346 < /dev/null 
+
+it_works_with_localhost() {
+  start_https_server_for localhost
+
+    gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem othername.minica.dev -p 12346 < /dev/null 
+}
+
+it_works_with_dev_name() {
+  # .dev hostnames should resolve to 127.0.0.1. If they don't we
+  # cannot run this test. 
+  if ! [[ $($HERE/res/jit $HERE/res/resolve test.ca.dev) = "127.0.0.1" ]]; then
+    false Make sure that .dev hostnames resolves to 127.0.0.1
   fi
+
+  start_https_server_for test.ca.dev
+
+    gnutls-cli --x509cafile=ca/root/root/certificate.pem test.ca.dev -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem test2.ca.dev -p 12346 < /dev/null 
+  ! gnutls-cli --x509cafile=ca/root/root/certificate.pem localhost -p 12346 < /dev/null 
 }
