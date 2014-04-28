@@ -14,14 +14,6 @@ retry() {
   return 1
 }
 
-ssl_verify() {
-  result=$(openssl s_client -showcerts $@ 2>/dev/null 2>/dev/null </dev/null | 
-    grep "Verify return code" | 
-    sed 's-.*: --')
-  echo $result
-  echo $result | grep '^0 ' > /dev/null
-}
-
 it_works_with_ruby_https() {
   generate_certificate localhost
 
