@@ -1,0 +1,15 @@
+#!/bin/bash
+set -o nounset
+set -o errexit
+
+has() {
+  if ! which $1 > /dev/null ; then
+    echo "Cannot find $1, aborting.." >&2
+    false
+  fi
+}
+
+has ruby
+has nginx
+has curl
+has gnutls-cli

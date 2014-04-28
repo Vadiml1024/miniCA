@@ -30,14 +30,6 @@ ssl_verify() {
   echo $result | grep '^0 ' > /dev/null
 }
 
-it_has_prerequisites() {
-  which curl || false "Missing curl"
-  which gnutls-cli || false "Missing gnutls-cli"
-
-  which ruby || later  "Missing ruby"
-  which nginx || later "Missing nginx"
-}
-
 it_works_with_nginx() {
   generate_certificate localhost
 
