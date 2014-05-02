@@ -14,7 +14,7 @@ fi
 
 # -- local settings ---------------------------------------------------
 
-HERE=$(realpath $(dirname $0))
+HERE=$(cd $(dirname $0) && pwd)
 
 MINICA_ROOT=
 
