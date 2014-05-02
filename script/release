@@ -1,30 +1,78 @@
-#!/bin/bash
-set -o nounset
-set -o errexit
+#!/usr/bin/env ruby
 
-die() {
-  echo "$@" >&2
+require "fileutils"
+
+# -- helpers ------------------------------------------------------------------
+
+def die(*args)
+  STDERR.puts args.join(" ")
   exit 1
-}
+end
 
-#
-# verify source code is clean
-if git status --porcelain 2>/dev/null | egrep '^ M|^M ' > /dev/null ; then
+def system!(*args)
+  return if system *args
+  die "#{args.first} failed."
+end
+
+# -- verify source code is clean ----------------------------------------------
+
+if system "git status --porcelain 2>/dev/null | egrep '^ M|^M ' > /dev/null"
   die "Working tree not clean."
-fi
+end
 
-#
-#
-VERSION=$(bin/miniCA version)
-if [ -z "$VERSION" ]; then
+# -- verify version number ----------------------------------------------------
+
+VERSION=`bin/miniCA version`.strip
+if VERSION == "" then
   die "Version must be set."
-fi
+end
 
-TAG="v${VERSION}"
-if [ "$(git tag -l ${TAG})" ]; then
-  die "Version ${TAG} is already set."
-fi
+TAG="v#{VERSION}"
+if `git tag -l #{TAG}`.strip != "" then
+  die "Version #{TAG} is already set."
+end
 
-git tag -f "${TAG}" -m "Automatically tagged by release script"
-git push
-git push --follow-tags
+# -- get changes --------------------------------------------------------------
+
+unless File.exist?("CHANGELOG.md")
+  previous_version = `git log --pretty=format:%H | tail -1`.strip
+else
+  version_tags = `git tag -l 'v[0-9]*'`.split("\n")
+  version_tags = version_tags.sort_by do |tag|
+    tag.split(/\D+/).reject(&:empty?).map(&:to_i)
+  end
+  previous_version = version_tags.last
+end
+
+puts "Changes from #{previous_version} .. #{VERSION}:"
+
+changes = `git log --format=format:'- %s [%an]' #{previous_version}..HEAD`
+puts "\n#{changes}\n"
+
+# -- build CHANGELOG.md file --------------------------------------------------
+
+if File.exist?("CHANGELOG.md")
+  FileUtils.cp "CHANGELOG.md", "CHANGELOG.old.md"
+
+  system! "git reset CHANGELOG.md > /dev/null"
+  system! "git checkout CHANGELOG.md"
+else
+  system! "touch CHANGELOG.md"
+  system! "git add CHANGELOG.md"
+end
+
+old_changelog = File.read "CHANGELOG.md"
+File.open "CHANGELOG.md", "w" do |io|
+  io.write "# v#{VERSION}: #{Time.now.strftime "%c"}\n\n"
+  io.write changes
+  io.write "\n\n"
+  io.write old_changelog
+end
+
+system! "git commit -m 'Updates CHANGELOG.md' CHANGELOG.md"
+
+# -- tag version number -------------------------------------------------------
+
+system! "git tag -f #{TAG} -m 'Automatically tagged by release script'"
+system! "git push"
+system! "git push --follow-tags"
