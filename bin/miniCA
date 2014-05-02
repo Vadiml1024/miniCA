@@ -25,7 +25,7 @@ export CA_ROOT
 
 # -- settings ---------------------------------------------------------
 
-MINICA_VERSION=0.1.1
+MINICA_VERSION=0.1.2
 
 # -- shortcuts for openssl commands -----------------------------------
 
