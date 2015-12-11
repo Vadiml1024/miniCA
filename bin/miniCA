@@ -78,10 +78,11 @@ ssl_keygen() {
   [[ -e ${fqdn}.priv ]] && die "Target file ${fqdn}.priv exists already"
   [[ -e ${fqdn}.csr ]]  && die "Target file ${fqdn}.csr exists already"
 
+  $genrsa ${WITPHASS} -out ${fqdn}.priv
   $req -new \
        -nodes \
        -days 7300 \
-       -keyout ${fqdn}.priv \
+       -key ${fqdn}.priv \
        -out ${fqdn}.csr \
        -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn}
        
@@ -229,7 +230,7 @@ Usage: $0 <subcommand> options ...
 
 The following subcommands are supported:
 
-$0 generate CN                  ... generate a key and a CSR for a given CN
+$0 generate [-p] CN             ... generate a key and a CSR for a given CN (when -p ask for password)
 $0 init -r ROOT                 ... initialize a CA in ROOT
 $0 sign -r ROOT name.csr        ... sign a CSR
 $0 verify -r ROOT name.pem      ... verify a certificate against the CSR
@@ -245,12 +246,13 @@ EOF
 subcommand=${1:-}
 [[ "$subcommand" ]] && shift
 
-while getopts “hr:” OPTION
+while getopts “pvhr:” OPTION
 do
   case $OPTION in
     r) MINICA_ROOT=$(abspath $OPTARG);;
     v) VERBOSE=1 ;;
     h) usage ;;
+    p) WITPHASS=-des3 ;;
     ?) usage ;;
   esac
 done
