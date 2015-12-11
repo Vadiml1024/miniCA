@@ -83,6 +83,12 @@ the miniCA package for convinience reasons only.
     pinkunicorn.pipe2.me.pem
     pinkunicorn.pipe2.me.csr
 
+**Note:** This command generates passwordless key file however -p option
+will force it to ask for passphrese for key file protection:
+    # example:
+    miniCA generate -p pserver
+    
+
 ### Configuring a miniCA installation: `miniCA init`
 
 `miniCA` is able to work with multiple CA instances. Each CA instance lives in
