@@ -80,10 +80,11 @@ ssl_keygen() {
 
   $req -new \
        -nodes \
+       -days 7300 \
        -keyout ${fqdn}.priv \
        -out ${fqdn}.csr \
-       -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn} \
-       -days 7300
+       -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn}
+       
 }
 
 #
@@ -102,6 +103,7 @@ ca_sign_csr() {
   local basename=$(echo $csr | sed 's-\.csr$--')
 
   $ca -batch                          \
+    -days 7300                        \
     -policy policy_anything           \
     -notext                           \
     -out "$basename.bare.pem"         \
