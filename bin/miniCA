@@ -114,6 +114,12 @@ ca_sign_csr() {
   cp "$basename.bare.pem" "$CA_ROOT/certs/$basename"
 
   # generate complete certificate (i.e. certificate concatenated with intermediate and root CA certificate)
+  cat \
+      "$MINICA_ROOT/intermediate/root/certificate.pem" \
+      "$MINICA_ROOT/root.pem" > "CAChain.pem"
+
+
+
   cat "$basename.bare.pem" \
       "$MINICA_ROOT/intermediate/root/certificate.pem" \
       "$MINICA_ROOT/root.pem" > "$basename.pem"
