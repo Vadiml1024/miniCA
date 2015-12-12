@@ -14,6 +14,8 @@ fi
 
 # -- local settings ---------------------------------------------------
 
+WITHPASS=
+
 HERE=$(cd $(dirname $0) && pwd)
 
 MINICA_ROOT=
@@ -78,7 +80,7 @@ ssl_keygen() {
   [[ -e ${fqdn}.priv ]] && die "Target file ${fqdn}.priv exists already"
   [[ -e ${fqdn}.csr ]]  && die "Target file ${fqdn}.csr exists already"
 
-  $genrsa ${WITPHASS} -out ${fqdn}.priv
+  $genrsa $WITHPASS -out ${fqdn}.priv
   $req -new \
        -nodes \
        -days 7300 \
@@ -258,7 +260,7 @@ do
     r) MINICA_ROOT=$(abspath $OPTARG);;
     v) VERBOSE=1 ;;
     h) usage ;;
-    p) WITPHASS=-des3 ;;
+    p) WITHPHASS=-des3 ;;
     ?) usage ;;
   esac
 done
