@@ -86,8 +86,8 @@ ssl_keygen() {
        -days 7300 \
        -key ${fqdn}.priv \
        -out ${fqdn}.csr \
-       -subj /C=de/ST=ne/L=Berlin/O=pipe2me/CN=${fqdn}
-       
+       -subj "/C=$CA_COUNTRY/ST=$CA_STATE/L=$CA_CITY/O=$CA_ORG_NAME/OU=$CA_ORG_UNIT/CN=${fqdn}"
+        
 }
 
 #
